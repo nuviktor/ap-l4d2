@@ -1,0 +1,114 @@
+---
+- hosts: l4d2
+  remote_user: admin
+  vars:
+    - mms_archive_name: "mmsource-{{ mms_branch_version }}.{{ mms_minor_version }}-linux.tar.gz"
+    - sm_archive_name: "sourcemod-{{ sm_branch_version }}.{{ sm_minor_version }}-linux.tar.gz"
+    - steamcmd_path: /usr/local/lib/steam
+  tasks:
+    - name: create steam directory
+      file:
+        path: "{{ steamcmd_path }}"
+        state: directory
+        owner: admin
+        group: admin
+      become: true
+
+    - name: install steamcmd
+      unarchive:
+        src: "https://steamcdn-a.akamaihd.net/client/installer/steamcmd_linux.tar.gz"
+        dest: "{{ steamcmd_path }}"
+        remote_src: true
+        creates: "{{ steamcmd_path }}/steamcmd.sh"
+
+    - name: install packages
+      apt:
+        name: "{{ item }}"
+        state: present
+      with_items:
+        - lib32gcc1
+        - screen
+        - unzip
+      become: true
+
+    - name: install l4d2
+      command: ./steamcmd.sh +login anonymous +force_install_dir ./l4d2/ +app_update 222860 +quit
+      args:
+        chdir: "{{ steamcmd_path }}"
+        creates: "{{ steamcmd_path }}/l4d2/left4dead2/"
+
+
+    - name: stat metamod
+      stat:
+        path: "{{ steamcmd_path }}/l4d2/left4dead2/addons/metamod"
+      register: mms
+
+    - name: download mms
+      get_url:
+        url: "https://mms.alliedmods.net/mmsdrop/{{ mms_branch_version }}/{{ mms_archive_name }}"
+        dest: "/tmp"
+      when: not mms.stat.exists
+
+    - name: install mms
+      unarchive:
+        src: "/tmp/{{ mms_archive_name }}"
+        dest: "{{ steamcmd_path }}/l4d2/left4dead2/"
+        remote_src: true
+        creates: "{{ steamcmd_path }}/l4d2/left4dead2/addons/metamod"
+
+    - name: remove mms archive
+      file:
+        path: "/tmp/{{ mms_archive_name }}"
+        state: absent
+
+
+    - name: stat sourcemod
+      stat:
+        path: "{{ steamcmd_path }}/l4d2/left4dead2/addons/sourcemod"
+      register: sm
+
+    - name: download sourcemod
+      get_url:
+        url: "https://sm.alliedmods.net/smdrop/{{ sm_branch_version }}/{{ sm_archive_name }}"
+        dest: "/tmp"
+      when: not sm.stat.exists
+
+    - name: install sourcemod
+      unarchive:
+        src: "/tmp/{{ sm_archive_name }}"
+        dest: "{{ steamcmd_path }}/l4d2/left4dead2/"
+        remote_src: true
+        creates: "{{ steamcmd_path }}/l4d2/left4dead2/addons/sourcemod"
+
+    - name: remove sourcemod archive
+      file:
+        path: "/tmp/{{ sm_archive_name }}"
+        state: absent
+
+
+    - name: install mods
+      copy:
+        src: "files/mods/{{ item }}.smx"
+        dest: "{{ steamcmd_path }}/l4d2/left4dead2/addons/sourcemod/plugins/"
+      with_items:
+#        - snarespeak
+        - timecontroller
+
+    - name: install run script
+      template:
+        src: templates/srcds_run
+        dest: "{{ steamcmd_path }}/l4d2/"
+        mode: 0755
+
+    - name: install systemd unit file
+      template:
+        src: templates/l4d2.service
+        dest: /etc/systemd/system/l4d2.service
+      become: true
+
+    - name: start l4d2
+      systemd:
+        name: l4d2
+        state: started
+        enabled: true
+      become: true

@@ -1,0 +1,12 @@
+[Unit]
+Description=L4D2 server
+After=network.target
+
+[Service]
+Type=forking
+ExecStart=/usr/bin/screen -d -m -S l4d2 "{{ steamcmd_path }}/l4d2/srcds_run"
+User=admin
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

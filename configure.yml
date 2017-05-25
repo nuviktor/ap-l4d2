@@ -1,0 +1,15 @@
+---
+- hosts: l4d2
+  remote_user: admin
+  vars:
+    - steamcmd_path: /usr/local/lib/steam
+  tasks:
+    - name: configure server
+      copy:
+        src: files/server.cfg
+        dest: "{{ steamcmd_path }}/l4d2/left4dead2/cfg/"
+
+    - name: configure admins
+      template:
+        src: templates/admins_simple.ini
+        dest: "{{ steamcmd_path }}/l4d2/left4dead2/addons/sourcemod/configs/admins_simple.ini"

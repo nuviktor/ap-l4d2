@@ -1,0 +1,16 @@
+---
+- hosts: l4d2
+  remote_user: admin
+  vars:
+    - steamcmd_path: /usr/local/lib/steam
+  tasks:
+    - name: update
+      command: ./steamcmd.sh +login anonymous +force_install_dir ./l4d2/ +app_update 222860 +quit
+      args:
+        chdir: "{{ steamcmd_path }}"
+
+    - name: restart l4d2
+      systemd:
+        name: l4d2
+        state: restarted
+      become: true

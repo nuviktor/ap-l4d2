@@ -1,0 +1,4 @@
+#!/bin/sh
+
+cd "{{ steamcmd_path }}/l4d2" || exit 1
+LD_LIBRARY_PATH=.:bin ./srcds_linux -game left4dead2 +map c1m1_hotel
